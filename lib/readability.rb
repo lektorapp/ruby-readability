@@ -41,7 +41,7 @@ module Readability
       @html.css("script, style").each { |i| i.remove }
       remove_unlikely_candidates! if @remove_unlikely_candidates
       transform_misused_divs_into_paragraphs!
-      
+
       @candidates     = score_paragraphs(options[:min_text_length])
       @best_candidate = select_best_candidate(@candidates)
     end
@@ -78,16 +78,17 @@ module Readability
           url     = element["src"].value
           height  = element["height"].nil?  ? 0 : element["height"].value.to_i
           width   = element["width"].nil?   ? 0 : element["width"].value.to_i
-          
+
           if url =~ /\Ahttps?:\/\//i && (height.zero? || width.zero?)
-            image   = get_image_size(url) 
+            image   = get_image_size(url)
             next unless image
           else
             image = {:width => width, :height => height}
           end
-          
+
           image[:format] = File.extname(url).gsub(".", "")
-          
+          image[:url] = url
+
           if tested_images.include?(url)
             debug("Image was tested: #{url}")
             next
@@ -95,7 +96,7 @@ module Readability
 
           tested_images.push(url)
           if image_meets_criteria?(image)
-            list_images << url
+            list_images << image
           else
             debug("Image discarded: #{url} - height: #{image[:height]} - width: #{image[:width]} - format: #{image[:format]}")
           end
@@ -373,7 +374,7 @@ module Readability
       end
     end
 
-    def sanitize(node, candidates, options = {})    
+    def sanitize(node, candidates, options = {})
       node.css("h1, h2, h3, h4, h5, h6").each do |header|
         header.remove if class_weight(header) < 0 || get_link_density(header) > 0.33
       end
