@@ -195,8 +195,8 @@ module Readability
       prepare_candidates
       article = get_article(@candidates, @best_candidate)
 
-      cleaned_article = sanitize(article, @candidates, options)
-      if article.text.strip.length < options[:retry_length]
+      cleaned_article = sanitize(article, @candidates, @options)
+      if article.text.strip.length < @options[:retry_length]
         if @remove_unlikely_candidates
           @remove_unlikely_candidates = false
         elsif @weight_classes
@@ -375,6 +375,7 @@ module Readability
     end
 
     def sanitize(node, candidates, options = {})
+      options = @options.merge(options)
       node.css("h1, h2, h3, h4, h5, h6").each do |header|
         header.remove if class_weight(header) < 0 || get_link_density(header) > 0.33
       end
@@ -383,7 +384,7 @@ module Readability
         elem.remove
       end
 
-      if @options[:remove_empty_nodes]
+      if options[:remove_empty_nodes]
         # remove <p> tags that have no text content - this will also remove p tags that contain only images.
         node.css("p").each do |elem|
           elem.remove if elem.content.strip.empty?
@@ -394,7 +395,8 @@ module Readability
       clean_conditionally(node, candidates, "table, ul, div")
 
       # We'll sanitize all elements using a whitelist
-      base_whitelist = @options[:tags] || %w[div p]
+      base_whitelist = options[:tags] || %w[div p]
+      debug("Element whitelist #{base_whitelist}")
       # We'll add whitespace instead of block elements,
       # so a<br>b will have a nice space between them
       base_replace_with_whitespace = %w[br hr h1 h2 h3 h4 h5 h6 dl dd ol li ul address blockquote center]
@@ -408,7 +410,7 @@ module Readability
       ([node] + node.css("*")).each do |el|
         # If element is in whitelist, delete all its attributes
         if whitelist[el.node_name]
-          el.attributes.each { |a, x| el.delete(a) unless @options[:attributes] && @options[:attributes].include?(a.to_s) }
+          el.attributes.each { |a, x| el.delete(a) unless options[:attributes] && options[:attributes].include?(a.to_s) }
 
           # Otherwise, replace the element with its contents
         else
